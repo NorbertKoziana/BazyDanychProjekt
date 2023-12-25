@@ -191,7 +191,7 @@ FROM Teacher T JOIN Person P ON T.PersonID = P.PersonID
 JOIN Course C ON T.PersonID = C.TeacherID
 JOIN [Subject] S ON C.SubjectID = S.SubjectID;
 GO
-
+--SELECT * FROM TeachersInfo;
 -- Widok nr 2 - Policz ile każdy kurs ma spotkań oraz łączną długość spotkań
 GO
 IF OBJECT_ID('Lessons', 'V') IS NOT NULL
@@ -205,7 +205,7 @@ AS
 	JOIN Subject S ON C.SubjectID = S.SubjectID
 	GROUP BY C.AcademicYear, S.Name;
 GO
-
+--SELECT * FROM Lessons;
 -- Widok nr 3 - Dla każdego rodzica wyświetl jego dzieci
 GO
 IF OBJECT_ID('ParentChildren', 'V') IS NOT NULL
@@ -219,7 +219,7 @@ AS
 	JOIN Student S ON P.PersonID = S.ParentID
 	JOIN Person Sinfo ON Sinfo.PersonID = S.PersonID;
 GO
-
+--SELECT * FROM ParentChildren
 -- Widok nr 4 - Dla każdej osoby kim jest (nauczycielem, studentem itp)
 GO
 IF OBJECT_ID('IdentifyPerson', 'V') IS NOT NULL
@@ -243,7 +243,7 @@ AS
 	END AS [ParentCheck]
 	FROM Person P;
 GO
-
+--SELECT * FROM IdentifyPerson
 -- Widok nr 5 - Dla każdego ucznia oblicz średnią ocen w danym kursie, na którym zapisany był uczeń
 GO
 IF OBJECT_ID('AverageGrades', 'V') IS NOT NULL
@@ -259,6 +259,7 @@ AS
 	JOIN Grade G ON TC.StudentID = G.StudentID AND TC.CourseID = G.CourseID
 	GROUP BY S.PersonID, P.FirstName, P.LastName, G.CourseID;
 GO
+--SELECT * FROM AverageGrades;
 -- Procedury
 
 -- Procedura nr 1 - Dla konkretnego ucznia wypisz jego plan lekcji w przedziale pomiędzy zadanymi datami
@@ -340,9 +341,10 @@ CAST(F.StartDate as datetime) + CAST(@LessonEnd as datetime), @RoomID
 FROM dbo.GenerateDatesInteval(@StartDate, @EndDate, 7) F;
 GO
 
---EXEC AddCourseLesson @CourseID = 5, @DayOfTheWeek = 'Monday', @LessonStart = '12:00:00', @LessonEnd = '13:00:00',
---@StartDate='2023-11-04', @EndDate = '2023-11-27', @RoomID = 1
-
+/*
+EXEC AddCourseLesson @CourseID = 5, @DayOfTheWeek = 'Monday', @LessonStart = '12:00:00', @LessonEnd = '13:00:00',
+@StartDate='2023-04-04', @EndDate = '2023-04-27', @RoomID = 1
+*/
 --SELECT * FROM CourseDetails WHERE CourseID = 5;
 
 -- Procedura nr 4 - dla podanego id studenta wypisuje informacje o nim, jego rodzicu i jego rodzeństwu
@@ -412,13 +414,13 @@ END;
 EXEC StudentCompleted @StudentID = 6
 
 INSERT INTO TakenCourse VALUES
-(1, 8, NULL),
+(4, 8, NULL),
 (4, 6, NULL);--tutaj nie przejdzie bo kurs 1 i kurs 4 to ten sam przedmiot a student nr 6 już zaliczył kurs 1
 
 EXEC StudentCompleted @StudentID = 8
-
+SELECT * FROM TakenCourse;
 INSERT INTO TakenCourse VALUES
-(1, 8, NULL),
+(4, 8, NULL),
 (5, 8, NULL); -- to przejdzie bo student nr 8 już miał ten przedmiot ale dostał z niego ocene końcową 2 czyli poprawia ten przedmiot
 */
 -- Wyzwalacz nr 2 - Sprawdza czy rodzic podał adres email jeśli nie podał nr telefonu
@@ -438,14 +440,13 @@ AS
 ;
 
 /*
+SELECT * FROM Person;
+
+INSERT INTO Parent VALUES (2, NULL); -- nie zadziała bo osoba nr 2 nie podała nr telefonu
+
 UPDATE Person SET PhoneNumber = '123456789' WHERE PersonID = 2;
 
-SELECT * FROM Person;
-SELECT * FROM Parent;
-
-
-INSERT INTO Parent VALUES (1, NULL); -- nie zadziała bo osoba nr jeden nie podała nr telefonu więc musi podać adres email
-INSERT INTO Parent VALUES (2, NULL); -- zadziała bo osoba nr 2 podała nr telefonu
+INSERT INTO Parent VALUES (2, NULL); -- teraz zadziała
 */
 
 -- Wyzwalacz nr 3 - Sprawdza czy sala nie jest już zajęta przez inne zajęcia
