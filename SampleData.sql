@@ -319,11 +319,9 @@ RETURN
 	SELECT * FROM MY_CTE
 )
 GO
-
 --SELECT * FROM dbo.GenerateDatesInteval('2023-08-09','2023-08-16',7);
 
--- Procedura nr 3 - Dodaje jakiś przedmiot np. w każdy wtorek o 12:00; jeśli jest kolizja z salą to wtedy wyzwalacz zablokuje; zakładam że podane daty są poprawne
---czyli np. że startdate<=enddate oraz że w przedziale tym istnieje przynajmniej jeden dzień tygodnia podany w dayoftheweek
+-- Procedura nr 3 - Dodaje jakiś przedmiot np. w każdy wtorek o 12:00; jeśli jest kolizja z salą to wtedy wyzwalacz zablokuje;
 GO
 IF OBJECT_ID('AddCourseLesson', 'P') IS NOT NULL
 	DROP PROCEDURE AddCourseLesson;
@@ -336,9 +334,12 @@ WHILE(DATENAME(DW,@StartDate) != @DayOfTheWeek)
 BEGIN
 	SET @StartDate = DATEADD(day, 1, @StartDate)
 END
-INSERT INTO CourseDetails(CourseID, StartDate, EndDate, RoomID) SELECT @CourseID, CAST(F.StartDate as datetime) + CAST(@LessonStart as datetime),
-CAST(F.StartDate as datetime) + CAST(@LessonEnd as datetime), @RoomID
-FROM dbo.GenerateDatesInteval(@StartDate, @EndDate, 7) F;
+IF @StartDate <= @EndDate
+BEGIN
+	INSERT INTO CourseDetails(CourseID, StartDate, EndDate, RoomID) SELECT @CourseID, CAST(F.StartDate as datetime) + CAST(@LessonStart as datetime),
+	CAST(F.StartDate as datetime) + CAST(@LessonEnd as datetime), @RoomID
+	FROM dbo.GenerateDatesInteval(@StartDate, @EndDate, 7) F;
+END
 GO
 
 /*
@@ -399,9 +400,11 @@ BEGIN
 		FROM (
 			SELECT TC.StudentID, C.SubjectID , COUNT(*) [counter]
 			FROM TakenCourse TC 
+			--JOIN inserted I ON TC.StudentID = I.StudentID AND TC.CourseID = I.CourseID - to nie zadziała bo może być tak, że sa różne courseid ale ten sam subject
+			--czyli ten sam przedmiot ale prowadzony w różnych latach akademickich
 			JOIN Course C ON TC.CourseID = C.CourseID
 			WHERE TC.StudentID IN (SELECT StudentID FROM inserted WHERE StudentID IS NOT NULL)--zeby sprawdzac tylko dla studentow ktorych dotyczy zmiana
-			AND TC.FinalMark IS NULL OR TC.FinalMark != 2 --jeśli juz zaliczał, ale dostał ocene 2 to może poprawić więc jest ok
+			AND (TC.FinalMark IS NULL OR TC.FinalMark != 2) --jeśli juz zaliczał, ale dostał ocene 2 to może poprawić więc jest ok
 			GROUP BY TC.StudentID, C.SubjectID
 		)Subquery
 	)
@@ -469,7 +472,7 @@ BEGIN
 		)Subquery
 	)
 	BEGIN
-		RAISERROR('Room already taken!.', 11, 2)
+		RAISERROR('Room already taken!', 11, 2)
 		ROLLBACK
 	END
 END;
