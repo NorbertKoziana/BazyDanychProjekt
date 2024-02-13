@@ -192,6 +192,7 @@ JOIN Course C ON T.PersonID = C.TeacherID
 JOIN [Subject] S ON C.SubjectID = S.SubjectID;
 GO
 --SELECT * FROM TeachersInfo;
+
 -- Widok nr 2 - Policz ile każdy kurs ma spotkań oraz łączną długość spotkań
 GO
 IF OBJECT_ID('Lessons', 'V') IS NOT NULL
@@ -200,12 +201,13 @@ IF OBJECT_ID('Lessons', 'V') IS NOT NULL
 GO
 CREATE VIEW Lessons
 AS
-	SELECT C.AcademicYear, S.Name, COUNT(*) as NumberOfMeetings, SUM(DATEDIFF(minute, CD.StartDate, CD.EndDate))/60 as [Length]
+	SELECT C.AcademicYear, S.Name, COUNT(*) as NumberOfMeetings, SUM(DATEDIFF(minute, CD.StartDate, CD.EndDate))/60 as [Length (Hours)]
 	FROM Course C JOIN CourseDetails CD ON C.CourseID = CD.CourseID
 	JOIN Subject S ON C.SubjectID = S.SubjectID
 	GROUP BY C.AcademicYear, S.Name;
 GO
 --SELECT * FROM Lessons;
+
 -- Widok nr 3 - Dla każdego rodzica wyświetl jego dzieci
 GO
 IF OBJECT_ID('ParentChildren', 'V') IS NOT NULL
@@ -319,7 +321,7 @@ RETURN
 	SELECT * FROM MY_CTE
 )
 GO
---SELECT * FROM dbo.GenerateDatesInteval('2023-08-09','2023-08-16',7);
+--SELECT * FROM dbo.GenerateDatesInteval('2023-08-09','2023-08-17',7);
 
 -- Procedura nr 3 - Dodaje jakiś przedmiot np. w każdy wtorek o 12:00; jeśli jest kolizja z salą to wtedy wyzwalacz zablokuje;
 GO
@@ -343,10 +345,12 @@ END
 GO
 
 /*
+SELECT * FROM CourseDetails WHERE CourseID = 5;
+
 EXEC AddCourseLesson @CourseID = 5, @DayOfTheWeek = 'Monday', @LessonStart = '12:00:00', @LessonEnd = '13:00:00',
 @StartDate='2023-04-04', @EndDate = '2023-04-27', @RoomID = 1
 */
---SELECT * FROM CourseDetails WHERE CourseID = 5;
+
 
 -- Procedura nr 4 - dla podanego id studenta wypisuje informacje o nim, jego rodzicu i jego rodzeństwu
 GO
@@ -415,13 +419,14 @@ END;
 
 /*
 EXEC StudentCompleted @StudentID = 6
+SELECT * FROM Course;
+SELECT * FROM Subject;
 
 INSERT INTO TakenCourse VALUES
 (4, 8, NULL),
 (4, 6, NULL);--tutaj nie przejdzie bo kurs 1 i kurs 4 to ten sam przedmiot a student nr 6 już zaliczył kurs 1
 
 EXEC StudentCompleted @StudentID = 8
-SELECT * FROM TakenCourse;
 INSERT INTO TakenCourse VALUES
 (4, 8, NULL),
 (5, 8, NULL); -- to przejdzie bo student nr 8 już miał ten przedmiot ale dostał z niego ocene końcową 2 czyli poprawia ten przedmiot
@@ -468,7 +473,9 @@ BEGIN
 			SELECT * FROM CourseDetails CD
 			WHERE CD.CourseDetailsID != I.CourseDetailsID--bo oczywiście kolizja z samym soba zawsze bedzie
 			AND I.RoomID = CD.RoomID
-			AND ( (I.StartDate > CD.StartDate AND I.StartDate < CD.EndDate) OR (I.EndDate > CD.StartDate AND I.EndDate < CD.EndDate))
+			AND ( (I.StartDate > CD.StartDate AND I.StartDate < CD.EndDate) OR (I.EndDate > CD.StartDate AND I.EndDate < CD.EndDate)
+				OR (I.StartDate <= CD.StartDate AND I.EndDate >= CD.EndDate)
+			)
 		)Subquery
 	)
 	BEGIN
@@ -484,11 +491,11 @@ SELECT * FROM CourseDetails;
 INSERT INTO CourseDetails(CourseID, StartDate, EndDate, RoomID) VALUES
 (2, '2021-10-15 13:15:00.000', '2021-10-15 13:50:00.000', 1);
 
--zadziała bo ta sama sala ale inna godzina
+--zadziała bo ta sama sala ale inna godzina
 INSERT INTO CourseDetails(CourseID, StartDate, EndDate, RoomID) VALUES
 (2, '2021-10-15 13:45:00.000', '2021-10-15 14:00:00.000', 1);
 
--zadziała bo ta sama godzina ale inna sala
+--zadziała bo ta sama godzina ale inna sala
 INSERT INTO CourseDetails(CourseID, StartDate, EndDate, RoomID) VALUES
 (2, '2021-10-15 13:15:00.000', '2021-10-15 13:50:00.000', 4);
 */
@@ -562,3 +569,77 @@ INSERT INTO TakenCourse VALUES
 INSERT INTO TakenCourse VALUES
 (3, 8, 4.5);
 */
+
+
+--Funkcja nr 2 - Dla konkretnego ucznia wypisuje średnią ocen końcowych
+IF OBJECT_ID('AverageFinalMarks', 'FN') IS NOT NULL
+	DROP FUNCTION AverageFinalMarks;
+GO
+CREATE FUNCTION AverageFinalMarks
+(@StudentID int)
+RETURNS int
+AS
+BEGIN
+	RETURN (SELECT AVG(TC.FinalMark) FROM TakenCourse TC WHERE TC.StudentID = @StudentID AND TC.FinalMark IS NOT NULL GROUP BY TC.StudentID)
+END
+GO
+--SELECT * FROM TakenCourse;
+--SELECT dbo.AverageFinalMarks(9);
+
+--Funkcja nr 3 - Dla podanego AcademicYear wypisuje wszystkie dostępne kursy
+IF OBJECT_ID('AvailableCourses', 'IF') IS NOT NULL
+	DROP FUNCTION AvailableCourses;
+GO
+CREATE FUNCTION AvailableCourses
+(@AcademicYear varchar(64))
+RETURNS TABLE
+AS
+RETURN (
+		SELECT C.AcademicYear, P.FirstName as [Lecturer's Name], P.LastName [Lecturer's Surname], S.Name FROM Course C
+		JOIN Subject S ON C.SubjectID = S.SubjectID 
+		JOIN Teacher T ON C.TeacherID = T.PersonID 
+		JOIN Person P ON T.PersonID = P.PersonID
+		WHERE C.AcademicYear = @AcademicYear
+	);
+GO
+--SELECT * FROM dbo.AvailableCourses('2022/2023');
+
+-- Funkcja nr 4 - Dla podanego pokoju i dnia wyświetla kiedy sala jest zajęta
+IF OBJECT_ID('AvailableHours', 'TF') IS NOT NULL
+	DROP FUNCTION AvailableHours;
+GO
+CREATE FUNCTION AvailableHours
+(@RoomID int, @GivenDate date)
+RETURNS @TempTable TABLE
+(
+	CourseID int,
+	StartDate datetime,
+	EndDate datetime
+)
+AS
+BEGIN
+	INSERT INTO @TempTable 
+		SELECT CD.CourseID, CD.StartDate, CD.EndDate FROM CourseDetails CD 
+		WHERE CD.RoomID = @RoomID AND CD.StartDate >= @GivenDate AND CD.StartDate < dateadd(day,1,@GivenDate)
+	RETURN
+END
+GO
+--SELECT * FROM CourseDetails ORDER BY StartDate;
+--SELECT * FROM dbo.AvailableHours(1, '2021-10-15');
+
+-- Funkcja nr 5 - Dla podanej kwoty wypisuje nauczycieli zarabiających tyle lub więcej
+IF OBJECT_ID('TeacherSalary', 'IF') IS NOT NULL
+	DROP FUNCTION TeacherSalary
+GO
+CREATE FUNCTION TeacherSalary
+(@Salary money)
+RETURNS TABLE
+AS
+RETURN (
+	SELECT P.FirstName, P.LastName, T.HireDate, T.Salary 
+	FROM Teacher T JOIN Person P ON T.PersonID = P.PersonID
+	WHERE T.Salary >= @Salary
+)
+GO
+--SELECT * FROM Teacher;
+--SELECT * FROM dbo.TeacherSalary(1100);
