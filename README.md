@@ -1,4 +1,3 @@
-I changed your work a little bit. What do you think about it? Would you change something?
 # School Database Project
 
 ## Project Description
