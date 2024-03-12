@@ -24,5 +24,5 @@ To run the application, you need to have installed:
 1. Download SchoolDatabase.sql file.
 2. Open Microsoft SQL Server Mangagement Studio and connect to your server.
 3. Execute SchoolDatabase.sql file.
-4. If you need dummy data download and execute SampleData.sql file  (make sure to execute it on School Database; if you encounter errors, then execute it once again and errors should disappear).
+4. If you need dummy data then download and execute SampleData.sql file  (make sure to execute it on School Database; if you encounter errors, then execute it once again and errors should disappear).
 
