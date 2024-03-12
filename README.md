@@ -1,12 +1,11 @@
 # School Database Project
 
 ## Project Description
-The School Database project is an application designed to manage information about students, parents, teachers, subjects and grades in a school. 
-Short insights about files:
-Description.pdf - description of database
-SampleData.sql - commands that insert dummy data and create views, procedures, triggers,  functions
-School.bak - file to import database
-SchoolDatabase.sql - sql commands that create database and its contents (in case School.bak failed)
+The School Database project is a database designed for school to manage information about students, parents, teachers, subjects and grades.
+- Description.pdf - description of database
+- SampleData.sql - commands that insert dummy data and create views, procedures, triggers,  functions
+- School.bak - file to import database
+- SchoolDatabase.sql - sql commands that create database and its contents (in case School.bak failed)
 
 ## Technologies Used
 - Programming Language: T-SQL
