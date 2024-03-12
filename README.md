@@ -9,8 +9,8 @@ School.bak - file to import database
 SchoolDatabase.sql - sql commands that create database and its contents (in case School.bak failed)
 
 ## Technologies Used
-Programming Language: T-SQL
-Database Managment System: MSSQL
+- Programming Language: T-SQL
+- Database Managment System: MSSQL
 
 ## System Requirements
 To run the application, you need to have installed:
